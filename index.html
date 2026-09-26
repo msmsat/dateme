@@ -13,17 +13,17 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23101e2b'/%3E%3Cpath d='M32 51 12 31C-1 15 21 4 32 19 43 4 65 15 52 31Z' fill='%23e8a3ac'/%3E%3C/svg%3E">
   <link rel="preload" href="assets/moon-lake-rose.webp" as="image" fetchpriority="high">
   <link rel="preload" href="assets/cormorant.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=music1">
   <script>document.documentElement.classList.replace('no-js','js');</script>
   <script src="config.js" defer></script>
-  <script src="app.js" defer></script>
+  <script src="app.js?v=music1" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#letter">Перейти к письму</a>
   <header class="site-header">
     <a class="wordmark" href="#home" aria-label="В начало"><span class="moon-mark" aria-hidden="true">♡</span> Лере<span class="tiny-star" aria-hidden="true">♥</span></a>
     <nav aria-label="Навигация"><a href="#letter">Письмо</a><a href="#invitation">Приглашение</a></nav>
-    <button class="sound-toggle js-only" id="sound-toggle" type="button" aria-pressed="false" aria-label="Включить музыку"><span class="sound-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="sound-label">Звук выключен</span></button>
+    <button class="sound-toggle js-only" id="sound-toggle" type="button" aria-expanded="false" aria-controls="music-panel" aria-label="Открыть нашу песню"><span class="sound-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="sound-label">Наша песня</span></button>
   </header>
 
   <main>
@@ -94,6 +94,12 @@
 
     <p class="copy-status" id="copy-status" role="status" aria-live="polite"></p>
   </dialog>
+  <aside class="music-panel" id="music-panel" aria-labelledby="music-title" hidden>
+    <div class="music-heading"><div><span class="music-dedication">Для тебя, любимая ♡</span><h2 id="music-title">По уши в тебя влюблён</h2><p>Miyagi &amp; Andy Panda</p></div><button type="button" class="music-close" id="music-close" aria-label="Закрыть плеер и остановить музыку">×</button></div>
+    <div class="music-player" id="music-player"></div>
+    <p class="music-hint">Если музыка не началась, нажми ▶ в плеере.</p>
+    <a class="music-external" href="https://music.youtube.com/watch?v=Wwg4JRZrVcs" target="_blank" rel="noopener noreferrer">Не играет? Открыть в YouTube Music ↗</a>
+  </aside>
   <div class="celebration" id="celebration" aria-hidden="true"></div>
   <div class="sr-only" id="sound-status" role="status" aria-live="polite"></div>
 </body>
