@@ -48,7 +48,6 @@
   }
 
   function openResponse(accepted, button) {
-    closeMusicPanel(false);
     trigger = button;
     responseVersion += 1;
     reply = accepted
@@ -120,47 +119,88 @@
     copyButton.focus({ preventScroll: true });
   });
 
-  // Пытаемся запустить песню автоматически; браузер может потребовать нажатие Play.
+  // Тихая оригинальная мелодия. Генерируется локально, без загрузок и трекеров.
   const soundButton = byId('sound-toggle');
-  const musicPanel = byId('music-panel');
-  const musicPlayer = byId('music-player');
+  let audioContext;
+  let masterGain;
+  let musicTimer;
+  let playing = false;
+  let starting = false;
+  let chordIndex = 0;
+  const chords = [
+    [146.83, 220, 293.66, 369.99, 440],
+    [130.81, 196, 261.63, 329.63, 392],
+    [110, 164.81, 220, 293.66, 329.63],
+    [98, 146.83, 196, 246.94, 293.66]
+  ];
 
-  function closeMusicPanel(restoreFocus = true) {
-    musicPlayer.replaceChildren();
-    musicPanel.hidden = true;
-    soundButton.setAttribute('aria-expanded', 'false');
-    soundButton.setAttribute('aria-label', 'Открыть нашу песню');
-    byId('sound-label').textContent = 'Наша песня';
-    if (restoreFocus) soundButton.focus({ preventScroll: true });
+  function setSoundUI(enabled) {
+    soundButton.setAttribute('aria-pressed', String(enabled));
+    soundButton.setAttribute('aria-label', enabled ? 'Выключить музыку' : 'Включить музыку');
+    byId('sound-label').textContent = enabled ? 'Музыка для нас' : 'Звук выключен';
   }
 
-  function openMusicPanel(moveFocus = false) {
-    const frame = document.createElement('iframe');
-    frame.title = 'Miyagi & Andy Panda — По уши в тебя влюблён';
-    frame.src = 'https://www.youtube-nocookie.com/embed/Wwg4JRZrVcs?autoplay=1&playsinline=1&rel=0';
-    frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
-    frame.referrerPolicy = 'strict-origin-when-cross-origin';
-    frame.allowFullscreen = true;
-    musicPlayer.replaceChildren(frame);
-    musicPanel.hidden = false;
-    soundButton.setAttribute('aria-expanded', 'true');
-    soundButton.setAttribute('aria-label', 'Закрыть нашу песню');
-    byId('sound-label').textContent = 'Закрыть плеер';
-    if (moveFocus) byId('music-close').focus({ preventScroll: true });
+  function playPhrase() {
+    if (!playing || audioContext.state !== 'running') return;
+    const notes = chords[chordIndex % chords.length];
+    chordIndex += 1;
+    notes.forEach((frequency, index) => {
+      const start = audioContext.currentTime + index * .44;
+      const oscillator = audioContext.createOscillator();
+      const envelope = audioContext.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      envelope.gain.setValueAtTime(0, start);
+      envelope.gain.linearRampToValueAtTime(.16, start + .035);
+      envelope.gain.exponentialRampToValueAtTime(.001, start + 4.1);
+      oscillator.connect(envelope);
+      envelope.connect(masterGain);
+      oscillator.start(start);
+      oscillator.stop(start + 4.2);
+      oscillator.onended = () => { oscillator.disconnect(); envelope.disconnect(); };
+    });
   }
 
-  soundButton.addEventListener('click', () => {
-    if (!musicPanel.hidden) closeMusicPanel();
-    else openMusicPanel(true);
+  async function stopMusic() {
+    playing = false;
+    clearInterval(musicTimer);
+    setSoundUI(false);
+    if (!audioContext) return;
+    const oldContext = audioContext;
+    audioContext = undefined;
+    try { await oldContext.close(); } catch { /* Контекст мог уже закрыться. */ }
+  }
+
+  soundButton.addEventListener('click', async () => {
+    if (starting) return;
+    if (playing) { await stopMusic(); return; }
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+      byId('sound-status').textContent = 'Этот браузер не поддерживает музыку. Приглашение можно открыть без неё.';
+      return;
+    }
+    starting = true;
+    try {
+      audioContext = new AudioContextClass();
+      masterGain = audioContext.createGain();
+      masterGain.gain.value = .22;
+      masterGain.connect(audioContext.destination);
+      await audioContext.resume();
+      if (document.hidden || !audioContext || audioContext.state !== 'running') {
+        await stopMusic();
+        return;
+      }
+      playing = true;
+      chordIndex = 0;
+      setSoundUI(true);
+      playPhrase();
+      musicTimer = setInterval(playPhrase, 4800);
+    } catch {
+      await stopMusic();
+      byId('sound-status').textContent = 'Музыка не включилась. Можно попробовать ещё раз или продолжить без звука.';
+    } finally { starting = false; }
   });
 
-  byId('music-close').addEventListener('click', () => closeMusicPanel());
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !musicPanel.hidden) closeMusicPanel();
-  });
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) closeMusicPanel(false);
-  });
-  window.addEventListener('pagehide', () => closeMusicPanel(false));
-  openMusicPanel();
+  document.addEventListener('visibilitychange', () => { if (document.hidden) void stopMusic(); });
+  window.addEventListener('pagehide', () => { void stopMusic(); });
 })();
